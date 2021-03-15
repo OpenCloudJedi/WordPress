@@ -1,0 +1,99 @@
+---
+- name: Setup and configure wordpress webservers
+  hosts: webservers
+  become: yes
+  vars:
+    - website_name: wordpress.apachefun.com
+    - docroot: apachefun
+    - db: wordpress_db
+    - db_user: wordpress_user
+    - db_password: AwesomeSauce!
+    - db_host: 192.168.55.203
+  handlers:
+    - name: restart httpd
+      service:
+        name: httpd
+        state: restarted
+  tasks:
+    - name: install packages
+      dnf:
+        name:
+          - httpd
+          - mod_ssl
+          - '@php:7.2'
+          - php-gd
+          - php-mysqlnd
+        state: present
+    - name: Enable and start httpd service
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+    - name: Enable and start php-fpm service
+      service:
+        name: php-fpm
+        state: started
+        enabled: yes
+    - name: Touch config file
+      file:
+        path: /etc/httpd/conf.d/{{ docroot }}.conf
+        owner: root
+        group: root
+        state: touch
+    - name: Create DocumentRoot directory
+      file:
+        path: /var/www/html/{{ docroot }}/wordpress
+        owner: apache
+        group: apache
+        state: directory
+    - name: Create Config File for apache
+      blockinfile:
+        path: /etc/httpd/conf.d/{{ docroot }}.conf
+        block: |
+          <VirtualHost *:80>
+          ServerName {{ website_name }}
+          DocumentRoot /var/www/html/{{ docroot }}/wordpress
+          CustomLog logs/{{ website_name }}.access.log combined
+          ErrorLog logs/{{ website_name }}.error.log
+          </VirtualHost>
+          <VirtualHost *:443>
+          ServerName {{ website_name }}
+          DocumentRoot /var/www/html/{{ docroot }}/wordpress
+          CustomLog logs/{{ website_name }}_443.access.log combined
+          ErrorLog logs/{{ website_name }}_443.error.log
+          </VirtualHost>
+      notify: restart httpd
+    - name: Extract latest wordpress archive into docroot
+      unarchive:
+        src: https://wordpress.org/latest.tar.gz
+        dest: /var/www/html/{{ docroot }}
+        remote_src: yes
+    - name: Copy files to the correct location
+      command: "cp -r /root/wordpress/ /var/www/html/{{ docroot }}/"
+    - name: Touch WordPress config file
+      file:
+        path: /var/www/html/{{ docroot }}/wordpress/wp-config.php
+        owner: root
+        group: root
+        state: touch
+    - name: Create Config File for WordPress
+      blockinfile:
+        path: /var/www/html/{{ docroot }}/wordpress/wp-config.php
+        block: |
+          // ** MySQL settings - You can get this info from your web host ** //
+          /** The name of the database for WordPress */
+          define( 'DB_NAME', '{{ db }}' );
+          /** MySQL database username */
+          define( 'DB_USER', '{{ db_user }}' );
+          /** MySQL database password */
+          define( 'DB_PASSWORD', '{{ db_password }}' );
+          /** MySQL hostname */
+          define( 'DB_HOST', '{{ db_host }}' );
+          /** MySQL auto-updating */
+          define( 'FS_METHOD', 'direct' );
+    - name: change ownership of files in /var/www/html
+      file:
+        path: /var/www/html
+        owner: apache
+        group: apache
+        recurse: yes

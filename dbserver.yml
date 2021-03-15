@@ -1,0 +1,63 @@
+---
+- name: Configure database servers for wordpress blog
+  hosts: dbservers
+  become: yes
+  handlers:
+    - name: Restart mariadb
+      service:
+        name: mariadb
+        state: restarted
+    - name: apply tmpfiles
+      command: systemd-tmpfiles --create & systemd-tmpfiles --clean
+  tasks:
+    - name: Install mariadb-server
+      yum:
+        name: mariadb-server
+        state: present
+    - name: Install python3-PyMySQL
+      yum:
+        name: python3-PyMySQL
+        state: present
+    - name: Enable and start mariadb service
+      service:
+        name: mariadb
+        state: started
+        enabled: yes
+    - name: Create wordpress database
+      mysql_db:
+        name: wordpress_db
+        state: present
+    - name: Create wordpress user
+      mysql_user:
+        name: wordpress_user
+        password: AwesomeSauce!
+        priv: 'wordpress_db.*:ALL'
+        state: present
+    - name: Configure tmpfiles.d to cleanup old mariadb backups
+      copy:
+        content: "d /mariadb_backups 0700 root root 2d"
+        dest: /etc/tmpfiles.d/mariadb.conf
+        owner: root
+        group: root
+        mode: '0770'
+      notify: apply tmpfiles
+    - name: Create mysql backups
+      cron:
+        name: "Create mysql backups"
+        minute: "0"
+        hour: "2"
+        job: 'mysqldump -A > /mariadb_backups/daily_backup$(date +\%F).sql'
+    - name: Configure firewall for webserver1 access to db
+      firewalld:
+        source: 192.168.55.201
+        zone: trusted
+        state: enabled
+        permanent: yes
+        immediate: yes
+    - name: Configure firewall for webserver2 access to db
+      firewalld:
+        source: 192.168.55.202
+        zone: trusted
+        state: enabled
+        permanent: yes
+        immediate: yes
