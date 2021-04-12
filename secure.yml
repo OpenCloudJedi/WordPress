@@ -1,0 +1,77 @@
+---
+- name: Configure security checklist on server
+  hosts: all
+  become: yes
+  vars_files:
+    - vars/passwords.yml
+  vars: 
+    - ADMIN: coby
+  handlers:
+    - name: restart fail2ban
+      service:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - fail2ban
+        - firewalld
+
+    - name: restart sshd
+      service:
+        name: sshd
+        state: restarted
+
+  tasks:
+    - name: create admin user
+      user:
+        name: "{{ ADMIN }}"
+        state: present
+        shell: /bin/bash
+        password: {{ 'admin_password' | password_hash('sha512', 'mysecretS@uce') }}
+
+    - name: Create admin user's sudoers file
+      copy:
+        dest: "/etc/sudoers.d/{{ ADMIN }}"
+        content: "{{ ADMIN }} ALL=(ALL) NOPASSWD: ALL"
+        owner: root
+        group: root
+
+    - name: update sshd config to disallow root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: PermitRootLogin yes
+        line: PermitRootLogin no
+        state: present
+      notify: restart sshd
+
+    - name: Install fail2ban
+      yum:
+        name: fail2ban
+        state: latest
+
+    - name: Enable and start fail2ban
+      service:
+        name: fail2ban
+        state: started
+        enabled: true
+
+    - name: copy config file for fail2ban
+      copy:
+        remote_source: true
+        src: /etc/fail2ban/jail.conf
+        dest: /etc/fail2ban/jail.local
+
+    - name: enable sshd jail
+      lineinfile:
+        regexp: '[sshd]'
+        line: enabled = true
+        insert_after: '[sshd]'
+      notify: restart fail2ban
+      #      flush_handlers: true
+
+    - name: Check that fail2ban has sshd jail enabled
+      command: fail2ban client status
+      register: fail2ban_client
+
+    - name: Show fail2ban result
+      debug:
+        vars: "{{ fail2ban_client }}"
