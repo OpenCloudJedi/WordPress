@@ -1,19 +1,4 @@
-172.25.250.10 Michael_web1
-[webserver]
-node1
-node2
-
-[dbserver]
-node3
-
-[proxy]
-node4
-
-[webserver:vars]
-group=webserver
-
-[dbserver:vars]
-group=dbserver
-
-[proxy:vars]
-group=proxy
+104.130.126.88 
+oury
+drew
+antony

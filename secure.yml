@@ -1,11 +1,11 @@
 ---
 - name: Configure security checklist on server
-  hosts: all
+  hosts: replaceme
   become: yes
   vars_files:
     - vars/passwords.yml
   vars: 
-    - ADMIN: michael
+    - ADMIN: replaceme
   handlers:
     - name: restart fail2ban
       service:
@@ -26,7 +26,7 @@
         name: "{{ ADMIN }}"
         state: present
         shell: /bin/bash
-        password: {{ 'admin_password' | password_hash('sha512') }}
+        password: "{{ 'admin_password' | password_hash('sha512') }}"
 
     - name: Create admin user's sudoers file
       copy:
@@ -55,23 +55,21 @@
         enabled: true
 
     - name: copy config file for fail2ban
-      copy:
-        remote_source: true
-        src: /etc/fail2ban/jail.conf
-        dest: /etc/fail2ban/jail.local
+      command: cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
 
     - name: enable sshd jail
       lineinfile:
+        path: /etc/fail2ban/jail.local
         regexp: '[sshd]'
         line: enabled = true
-        insert_after: '[sshd]'
+        insertafter: '[sshd]'
       notify: restart fail2ban
       #      flush_handlers: true
 
     - name: Check that fail2ban has sshd jail enabled
-      command: fail2ban client status
+      command: fail2ban-client status
       register: fail2ban_client
 
     - name: Show fail2ban result
       debug:
-        vars: "{{ fail2ban_client }}"
+        var: fail2ban_client
