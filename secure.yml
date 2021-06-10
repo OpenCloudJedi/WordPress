@@ -1,11 +1,11 @@
 ---
 - name: Configure security checklist on server
-  hosts: replaceme
+  hosts: drewdb
   become: yes
   vars_files:
     - vars/passwords.yml
   vars: 
-    - ADMIN: replaceme
+    - ADMIN: drew
   handlers:
     - name: restart fail2ban
       service:
@@ -26,7 +26,7 @@
         name: "{{ ADMIN }}"
         state: present
         shell: /bin/bash
-        password: "{{ 'admin_password' | password_hash('sha512') }}"
+        password: "{{ admin_password | password_hash('sha512') }}"
 
     - name: Create admin user's sudoers file
       copy:
@@ -43,10 +43,14 @@
         state: present
       notify: restart sshd
 
-    - name: Install fail2ban
+    - name: Install fail2ban and things
       yum:
-        name: fail2ban
+        name: "{{ item }}"
         state: latest
+      loop:
+        - fail2ban
+        - vim
+        - bash-completion
 
     - name: Enable and start fail2ban
       service:
@@ -64,7 +68,6 @@
         line: enabled = true
         insertafter: '[sshd]'
       notify: restart fail2ban
-      #      flush_handlers: true
 
     - name: Check that fail2ban has sshd jail enabled
       command: fail2ban-client status
