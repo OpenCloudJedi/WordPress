@@ -1,6 +1,4 @@
-104.130.126.88 
-oury
-drew
-drewdb
-antony
-eric
+[webservers]
+192.168.2.3
+[dbservers]
+192.168.2.4

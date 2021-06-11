@@ -1,11 +1,11 @@
 ---
 - name: Configure security checklist on server
-  hosts: drewdb
+  hosts: amberdb
   become: yes
   vars_files:
     - vars/passwords.yml
   vars: 
-    - ADMIN: drew
+    - ADMIN: amber
   handlers:
     - name: restart fail2ban
       service:

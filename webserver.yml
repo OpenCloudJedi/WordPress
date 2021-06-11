@@ -8,7 +8,7 @@
     - db: wordpress_db
     - db_user: wordpress_user
     - db_password: AwesomeSauce!
-    - db_host: 192.168.55.203
+    - db_host: 192.168.2.4
   handlers:
     - name: restart httpd
       service:
@@ -20,16 +20,16 @@
         name:
           - httpd
           - mod_ssl
-          - '@php:7.2'
+          - '@php:7.4'
           - php-gd
           - php-mysqlnd
         state: present
-    - name: Enable and start httpd service
+    - name: Enable and start httpd  service
       service:
         name: httpd
         state: started
         enabled: yes
-    - name: Enable and start php-fpm service
+    - name: Enable and start php-fpm  service
       service:
         name: php-fpm
         state: started
@@ -66,7 +66,7 @@
     - name: Extract latest wordpress archive into docroot
       unarchive:
         src: https://wordpress.org/latest.tar.gz
-        dest: /var/www/html/{{ docroot }}
+        dest: /root/
         remote_src: yes
     - name: Copy files to the correct location
       command: "cp -r /root/wordpress/ /var/www/html/{{ docroot }}/"
